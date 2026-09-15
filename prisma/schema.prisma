@@ -1,0 +1,202 @@
+// Prisma schema for Salmi Series - V2 Premium
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ShippingType {
+  STOP_DESK
+  A_DOMICILE
+}
+
+enum StudyYear {
+  YEAR_1
+  YEAR_2
+  YEAR_3
+  YEAR_4
+  YEAR_5
+  YEAR_6
+  RESIDANAT
+  ALL
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified DateTime?
+  password      String
+  image         String?
+  role          String   @default("admin")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  title           String
+  slug            String      @unique
+  description     String      @db.Text
+  price           Int
+  oldPrice        Int?        // for discount display
+  discountPercent Int?        // e.g. 20 for -20%
+  stock           Boolean     @default(true)
+  stockCount      Int         @default(100) // precise inventory
+  category        String
+  studyYear       StudyYear   @default(RESIDANAT)
+  pages           Int?
+  image           String
+  images          String[]    @default([]) // additional images
+  featured        Boolean     @default(false)
+  // Premium fields
+  tableOfContents String?     @db.Text // JSON or text list
+  pdfPreview      String?     // /books/preview/xxx.pdf
+  author          String?     // "Dr. Salmi - Major Résidanat 2022"
+  rating          Float       @default(4.8)
+  reviewsCount    Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+  reviews         Review[]
+  bundleItems     BundleItem[]
+  stockAlerts     StockAlert[]
+
+  @@index([category])
+  @@index([studyYear])
+  @@index([featured])
+  @@index([createdAt])
+  @@index([price])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String   // "Amira B. - Alger"
+  stars     Int      @default(5)
+  comment   String   @db.Text
+  verified  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model PromoCode {
+  id        String   @id @default(cuid())
+  code      String   @unique // e.g. SALMI10
+  percent   Int      // 10 for 10%
+  active    Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Bundle {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  description String       @db.Text
+  price       Int          // bundle price
+  oldPrice    Int?         // sum of individual
+  image       String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  items       BundleItem[]
+}
+
+model BundleItem {
+  id        String  @id @default(cuid())
+  bundleId  String
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ShippingCompany {
+  id        String   @id @default(cuid())
+  name      String   @unique // Yalidine, Maystro, etc.
+  apiKey    String?
+  apiUrl    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model WilayaShipping {
+  id             String   @id @default(cuid())
+  wilaya         String   @unique // "16 - Alger"
+  priceStopDesk  Int      @default(400)
+  priceDomicile  Int      @default(600)
+  daysMin        Int      @default(1)
+  daysMax        Int      @default(3)
+  active         Boolean  @default(true)
+}
+
+model SiteSettings {
+  id          String   @id @default(cuid())
+  heroTitle   String?  @db.Text
+  heroSubtitle String? @db.Text
+  logo        String?
+  paymentCOD  Boolean  @default(true)
+  paymentCard Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  customerName  String
+  phone         String
+  wilaya        String
+  commune       String
+  address       String?
+  shippingType  ShippingType @default(STOP_DESK)
+  totalAmount   Int
+  shippingFee   Int          @default(0)
+  discount      Int          @default(0) // promo discount amount
+  promoCode     String?
+  status        OrderStatus  @default(PENDING)
+  trackingNote  String?      // admin can add tracking URL
+  shippingCompany String?    // Yalidine, etc.
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  items         OrderItem[]
+
+  @@index([status])
+  @@index([wilaya])
+  @@index([createdAt])
+  @@index([phone])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  title     String
+  price     Int
+  quantity  Int
+  image     String?
+}
+
+model StockAlert {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  phone     String
+  createdAt DateTime @default(now())
+
+  @@unique([productId, phone])
+  @@index([productId])
+}
