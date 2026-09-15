@@ -12,7 +12,7 @@ npm run db:seed
 npm run dev
 ```
 
-Seed admin: `admin123` / `ADMIN_PASSWORD` from `.env` (default `adminsalmiseries123**med` — change in production)
+Seed admin: `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env` (configure in `.env` - see `.env.example`)
 Seed data: 9 produits, 3 avis/produit, 2 promos (SALMI10 -10%, RESIDANAT20 -20%), 1 pack.
 
 ## Structure
@@ -32,8 +32,8 @@ Seed data: 9 produits, 3 avis/produit, 2 promos (SALMI10 -10%, RESIDANAT20 -20%)
 DATABASE_URL="postgresql://..."
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="..." # openssl rand -base64 32
-ADMIN_USERNAME=admin123
-ADMIN_PASSWORD="..."
+ADMIN_USERNAME="..."
+ADMIN_PASSWORD="..." # min 16 chars, never commit real value
 # Optional - production uploads
 # CLOUDINARY_URL="cloudinary://..."
 # BLOB_READ_WRITE_TOKEN="..."
